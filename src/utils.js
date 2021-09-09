@@ -1,8 +1,66 @@
+const Console = require("console");
 time = {second: 1000}
 time.minute = 60 * time.second
 time.hour = 60 * time.minute
 time.day = 24 * time.hour
 time.week = 7 * time.day
+
+const validateCronInput = input => {
+	const inputToArray = (input, limits, words = [], transform = i => i) => {
+		const rangeReg = `[${limits[0]}-${limits[1]}]`
+		if (! input.match(new RegExp(`^\*|(${rangeReg}(-${rangeReg})?(/\d+)?)$`))) {
+			// TODO regex is not valid, must work on it
+		}
+
+		if (input.includes(",")) {
+			return input.split(",").map(part => inputToArray(part, limits, words, transform)).flat(1)
+		}
+		let step
+		if (input.includes("/")) {
+			const splitInput = input.split("/")
+		}
+	}
+
+/*
+O = X(,X)*
+X = "*"|(L(-L)?(/D)?)
+L = limits[]
+D = number
+
+1 = [1] (1)
+1-5 = [1,2,3,4,5] (1 to 5)
+1-8/2 = [1,3,5,7] (every 2nd between 1 and 8 included)
+1/3 = [1,4,7,10] (non standard form of 1-12/3)
+1-8/52 = [1] (overflow is lost)
+1,3,5 = [1,3,5] (comma makes an union of before and after)
+*/
+
+	if (typeof input === "string") {
+		const splitInput = input.split(" ")
+		input = {
+			minute: splitInput[0],
+			hour: splitInput[1],
+			day: splitInput[2],
+			month: splitInput[3],
+			dayOfWeek: splitInput[4]
+		}
+	}
+	if (typeof input !== "object") {
+		throw new TypeError("Input type is not valid")
+	}
+	if (input.minute === undefined || input.hour === undefined || input.day === undefined || input.month === undefined || input.dayOfWeek === undefined) {
+		throw new Error("Given input doesn't have the necessary fields")
+	}
+	// input.minute = inputToArray(input.minute, [0,59])
+	// input.hour = inputToArray(input.hour, [0,23])
+	// input.day = inputToArray(input.day, [1,31])
+	// input.month = inputToArray(input.month, [1,12], ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"])
+	// input.dayOfWeek = inputToArray(input.dayOfWeek, [0,6], ["SUN","MON","TUE","WED","THU","FRI","SAT"], i => i === 7 ? 0 : Number.NaN)
+
+	console.log(inputToArray("1,3,7,15,20,18", [0,59]))
+
+	return input
+}
 
 module.exports = {
 	time,
@@ -12,19 +70,20 @@ module.exports = {
 	 * @return {Date}
 	 */
 	nextCronDate(input = "* * * * *") {
-
-		if (typeof input === "string") {
-			const splitInput = input.split(" ")
-			input = {
-				minute: splitInput[0],
-				hour: splitInput[1],
-				day: splitInput[2],
-				month: splitInput[3],
-				dayOfWeek: splitInput[4]
-			}
+		// these are not standard, but easy to implement
+		switch (input) {
+			case "@reboot":   return new Date()
+			case "@yearly":   input = "0 0 1 1 *"; break
+			case "@annually": input = "0 0 1 1 *"; break
+			case "@monthly":  input = "0 0 1 * *"; break
+			case "@weekly":   input = "0 0 * * 0"; break
+			case "@daily":    input = "0 0 * * *"; break
+			case "@hourly":   input = "0 * * * *"; break
 		}
 
-		const date = new Date(Date.now())
+		input = validateCronInput(input)
+
+		const date = new Date()
 		date.setUTCMinutes(date.getUTCMinutes() + 1, 0, 0)
 
 		if (input.minute === undefined || input.hour === undefined || input.day === undefined || input.month === undefined || input.dayOfWeek === undefined) {
@@ -73,7 +132,7 @@ module.exports = {
 		const maxDate = new Date(Date.now())
 		maxDate.setUTCFullYear(maxDate.getUTCFullYear() + 29, 0, 0)
 		while (dateIsNotValid && date.valueOf() < maxDate.valueOf()) {
-			console.log(date.toUTCString())
+
 			dateIsNotValid = false
 			while (! cronInput.month.includes(date.getUTCMonth() + 1)) {
 				date.setUTCDate(1)
@@ -107,6 +166,7 @@ module.exports = {
 				cronInput.dayOfWeek.includes(date.getUTCDay()) &&
 				cronInput.month.includes(date.getUTCMonth() + 1)
 				) {
+				console.log(date.toUTCString())
 				date.setUTCMinutes(date.getUTCMinutes() + 1)
 				dateIsNotValid = true
 			}

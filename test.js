@@ -10,5 +10,6 @@ console.log(
     utils.nextCronDate("1 1 1 1 1")
 )
 
-console.log(utils.nextCronDate("* * 31 12 1"))
+console.log(utils.nextCronDate("* * 1 12 1"))
+// console.log(utils.nextCronDate("61 * * * *"))
 
