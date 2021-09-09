@@ -70,49 +70,49 @@ module.exports = {
 		}
 
 		let dateIsNotValid = true
-		while (dateIsNotValid) {
+		const maxDate = new Date(Date.now())
+		maxDate.setUTCFullYear(maxDate.getUTCFullYear() + 29, 0, 0)
+		while (dateIsNotValid && date.valueOf() < maxDate.valueOf()) {
+			console.log(date.toUTCString())
 			dateIsNotValid = false
-			let limit = 12
-			while (! cronInput.month.includes(date.getUTCMonth() + 1) && limit-- !== 0) {
-				date.setUTCMonth(date.getUTCMonth() + 1, 0)
+			while (! cronInput.month.includes(date.getUTCMonth() + 1)) {
+				date.setUTCDate(1)
+				date.setUTCMonth(date.getUTCMonth() + 1)
 				date.setUTCHours(0, 0)
 				dateIsNotValid = true
 			}
-			if (limit === 0) {
-				throw new Error("Given input is invalid")
-			}
 
-			limit = 400
 			while (
 				! cronInput.day.includes(date.getUTCDate()) ||
 				! cronInput.dayOfWeek.includes(date.getUTCDay()) &&
-				limit-- !== 0
+				cronInput.month.includes(date.getUTCMonth() + 1)
 				) {
 				date.setUTCDate(date.getUTCDate() + 1)
 				date.setUTCHours(0, 0)
 				dateIsNotValid = true
 			}
-			if (limit === 0) {
-				throw new Error("Given input is invalid")
-			}
 
-			limit = 24
-			while (! cronInput.hour.includes(date.getUTCHours()) && limit-- !== 0) {
+			while (! cronInput.hour.includes(date.getUTCHours()) &&
+				cronInput.day.includes(date.getUTCDate()) &&
+				cronInput.dayOfWeek.includes(date.getUTCDay()) &&
+				cronInput.month.includes(date.getUTCMonth() + 1)
+				) {
 				date.setUTCHours(date.getUTCHours() + 1, 0)
 				dateIsNotValid = true
 			}
-			if (limit === 0) {
-				throw new Error("Given input is invalid")
-			}
 
-			limit = 60
-			while (! cronInput.minute.includes(date.getUTCMinutes()) && limit-- !== 0) {
+			while (! cronInput.minute.includes(date.getUTCMinutes()) &&
+				cronInput.hour.includes(date.getUTCHours()) &&
+				cronInput.day.includes(date.getUTCDate()) &&
+				cronInput.dayOfWeek.includes(date.getUTCDay()) &&
+				cronInput.month.includes(date.getUTCMonth() + 1)
+				) {
 				date.setUTCMinutes(date.getUTCMinutes() + 1)
 				dateIsNotValid = true
 			}
-			if (limit === 0) {
-				throw new Error("Given input is invalid")
-			}
+		}
+		if (dateIsNotValid) {
+			throw new RangeError("No valid date in the next 28 years")
 		}
 
 		return date
