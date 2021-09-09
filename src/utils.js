@@ -83,7 +83,7 @@ module.exports = {
 			}
 
 			while (
-				! cronInput.day.includes(date.getUTCDate()) ||
+				! cronInput.day.includes(date.getUTCDate()) &&
 				! cronInput.dayOfWeek.includes(date.getUTCDay()) &&
 				cronInput.month.includes(date.getUTCMonth() + 1)
 				) {
