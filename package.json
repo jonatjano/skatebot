@@ -1,0 +1,10 @@
+{
+  "author": "Jonatjano",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^13.1.0",
+    "sqlite3": "^5.0.2"
+  }
+}
