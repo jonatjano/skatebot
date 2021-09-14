@@ -23,6 +23,7 @@ module.exports = {
 		},
 		// tests on my own server, please don't modify
 		{
+			enabled: false,
 			what: {
 				guild: "484698958359429133", // my own test guild
 				messageContent: "",

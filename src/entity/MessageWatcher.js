@@ -1,40 +1,73 @@
-const utils = require("./utils.js")
+const utils = require("../utils.js")
 
-module.exports = class MessageWatcher {
-	#options
-	/**
-	 * @param {Object} messageWatcherOption
-	 *
-	 * @param {Object} messageWatcherOption.what What should the watcher observe ?
-	 * @param {string} messageWatcherOption.what.guild id of the discord guild to watch
-	 * @param {string} messageWatcherOption.what.messageContent only watch message containing this string (case insensitive)
-	 * @param {number} messageWatcherOption.what.readDuration the time between the start of the watch and it's end
-	 *
-	 * @param {string} messageWatcherOption.when When should the watcher report ?
-	 * Uses a the crontab syntax to define time (https://crontab.guru)
-	 *
-	 * @param {Object} messageWatcherOption.who Who should the watcher report to ?
-	 * @param {string[]} [messageWatcherOption.who.users] list of ids of users to DM the report to
-	 * @param {string[]} [messageWatcherOption.who.channels] list of ids of channel to report in, these channels should be inside the observed guild
-	 */
-	constructor(messageWatcherOption) {
-		this.#options = messageWatcherOption
+class MessageWatcherOption {
+	guild
+	messageContent
+	readDuration
+	crontab
+	reportUsers
+	reportChannels
+	enabled
 
-		this.#start()
+	constructor(option) {
+		this.guild = option?.what?.guild
+		this.messageContent = option?.what?.messageContent
+		this.readDuration = option?.what?.readDuration
+		this.crontab = option?.when
+		this.reportUsers = option?.who?.users
+		this.reportChannels = option?.who?.channels
+		this.enabled = this.enabled ?? true
 	}
 
+	validate() {
+		if (typeof this.guild !== "string") {
+			throw new TypeError("guild is not an id")
+		}
+		return true
+	}
+}
+
+module.exports = class MessageWatcher {
 	/**
-	 * check if the options object is valid, throw if not
-	 * @throws {TypeError} if the options object is not valid
+	 * @type {MessageWatcherOption}
 	 */
-	#validate() {
-		if (typeof this.#options !== "object") {
-			throw new TypeError("Option is not an object")
+	#options
+	/**
+	 * @type {NodeJS.Timeout}
+	 */
+	#timeoutId = null
+	/**
+	 * @param {MessageWatcherOption} messageWatcherOption
+	 */
+	constructor(messageWatcherOption) {
+		this.#options = new MessageWatcherOption(messageWatcherOption)
+		this.#options.validate()
+
+		if (messageWatcherOption.enabled) {
+			this.start()
 		}
 	}
 
-	#start() {
+	start() {
+		if (this.#timeoutId === null && this.#options.validate) {
+			this.#loop()
+		}
+	}
 
+	stop() {
+		clearTimeout(this.#timeoutId)
+		this.#timeoutId = null
+	}
+
+	#loop() {
+		this.#timeoutId = setTimeout(() => {
+			client.guilds
+				.resolve(this.#options.what.guild)
+				?.channels.fetch(this.#options.who.channels[0])
+					.then(channel => channel.send("watcher report (WIP)"))
+
+			this.#loop()
+		}, Number(utils.nextCronDate(this.#options.when)) - Date.now())
 	}
 
 	isForGuild(guild) {
@@ -61,7 +94,7 @@ module.exports = class MessageWatcher {
 		const nextCronDate = this.#nextCronDate
 
 		return `watches ${this.#options.what.messageContent.length !== 0 ? `message containing : "\`${this.#options.what.messageContent}\`"` : "every messages"}
-for ${this.#options.what.readDuration}ms before sending a report
+for ${utils.toTimeString(this.#options.what.readDuration)} before sending a report
 (next report read starts ${utils.dateAsDiscordTag(new Date(+nextCronDate - this.#options.what.readDuration), "R")})
 
 report uses the following crontab configuration : \`${this.#options.when}\` (https://crontab.guru/#${this.#options.when.replaceAll(" ", "_")})

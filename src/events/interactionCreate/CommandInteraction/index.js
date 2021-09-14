@@ -1,20 +1,32 @@
-const Command = require("./Command.js")
-const utils = require("../utils.js")
+const Command = require("../../../entity/Command.js")
 
 /**
  * @type {{[key: string]: Command}}
  */
-module.exports = watchers => ({
-	// "forget-slash-commands": new Command(
-	// 	{
-	// 		name: "forget-slash-commands",
-	// 		description: "Remove all registered slash commands",
-	// 		defaultPermission: true
-	// 	},
-	// 	interaction =>
-	// 		interaction.guild.commands.set([])
-	// 			.then(result => interaction.reply({ content: "Forgot slash commands for current guild", ephemeral: true }))
-	// ),
+module.exports = {
+	watchers: new Command(
+		{
+			name: "watchers",
+			description: "list message watchers for current server",
+			defaultPermission: true
+		},
+		interaction => interaction.reply({
+			content: watchers
+				.filter(w => w.isForGuild(interaction.guild))
+				.map(w => w.toString()).join("\n"),
+			ephemeral: true
+		})
+	),
+	"forget-slash-commands": new Command(
+		{
+			name: "forget-slash-commands",
+			description: "Remove all locally registered slash commands",
+			defaultPermission: true
+		},
+		interaction =>
+			interaction.guild.commands.set([])
+				.then(result => interaction.reply({ content: "Forgot slash commands for current guild", ephemeral: true }))
+	),
 
 	// "next-cron-time": new Command(
 	// 	{
@@ -56,18 +68,4 @@ module.exports = watchers => ({
 	// 		return inter.reply({ content: "Pong !", ephemeral: true })
 	// 	}
 	// ),
-
-	watchers: new Command(
-		{
-			name: "watchers",
-			description: "list message watchers for current server",
-			defaultPermission: true
-		},
-		interaction => interaction.reply({
-			content: watchers
-				.filter(w => w.isForGuild(interaction.guild))
-				.map(w => w.toString()).join("\n"),
-			ephemeral: true
-		})
-	)
-})
+}

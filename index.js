@@ -1,15 +1,15 @@
 // https://discord.com/oauth2/authorize?client_id=727636604692332616&scope=bot+applications.commands&permissions=0
 
-const { Client, Intents, CommandInteraction} = require('discord.js');
+const { Client, Intents} = require('discord.js');
 
 const messageCreate = require("./src/events/messageCreate.js")
-const MessageWatcher = require("./src/MessageWatcher.js")
+const MessageWatcher = require("./src/entity/MessageWatcher.js")
 const config = require("./config.js")
 /**
  * @type {MessageWatcher[]}
  */
-const watchers = []
-const slashCommands = require("./src/commands/index.js")(watchers)
+global.watchers = []
+global.interactions = require("./src/events/interactionCreate/index.js")
 
 const client = new Client({intents: [
 	Intents.FLAGS.GUILDS,
@@ -26,13 +26,15 @@ const client = new Client({intents: [
 	Intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
 	Intents.FLAGS.DIRECT_MESSAGE_TYPING
 ]});
+global.client = client
 
 client.on("ready", () => {
 	console.log(`Logged in as ${client.user.tag}!`);
 
-	client.application.commands.set(
-		Object.values(slashCommands).map(command => command.command)
-	)
+	client.application.commands.set([
+		...Object.values(interactions.commandInteraction).map(command => command.command),
+		...Object.values(interactions.contextMenuInteraction).map(command => command.command)
+	])
 
 	watchers.push(...config.messageWatchers.map(watcherOptions => new MessageWatcher(watcherOptions)))
 });
@@ -40,8 +42,27 @@ client.on("ready", () => {
 client.on("messageCreate", messageCreate(watchers));
 
 client.on('interactionCreate', async interaction => {
-	if (interaction instanceof CommandInteraction) {
-		return slashCommands[interaction.commandName].reply(interaction)
+	if (interaction.isCommand()) {
+		return interactions.commandInteraction[interaction.commandName].reply(interaction)
+	} else if (interaction.isContextMenu()) {
+		return interactions.contextMenuInteraction[interaction.commandName].reply(interaction)
+	} else if (interaction.isButton()) {
+		return interaction.reply({
+			content: "answer",
+			ephemeral: true,
+			components: [{
+				type: "ACTION_ROW",
+				components: [{
+					type: "BUTTON",
+					style: "PRIMARY",
+					label: "test",
+					customId: "testButton"
+				}]
+			}]
+		})
+	} else {
+		console.log(interaction)
+		interaction.reply(JSON.stringify(interaction))
 	}
 });
 

@@ -1,4 +1,4 @@
-time = {second: 1000}
+time = {millisecond: 1, second: 1000}
 time.minute = 60 * time.second
 time.hour = 60 * time.minute
 time.day = 24 * time.hour
@@ -184,5 +184,25 @@ module.exports = {
 	 */
 	dateAsDiscordTag(date, dateType= "F") {
 		return `<t:${Math.floor(date.getTime()/1000)}:${dateType}>`
+	},
+
+	/**
+	 * @param {int} duration
+	 */
+	toTimeString(duration) {
+		let ret = ""
+		let week = Math.floor(duration / time.week)
+		duration -= week * time.week
+		let day = Math.floor(duration / time.day)
+		duration -= day * time.day
+		let hour = Math.floor(duration / time.hour)
+		duration -= hour * time.hour
+		let minute = Math.floor(duration / time.minute)
+		duration -= minute * time.minute
+		let second = Math.floor(duration / time.second)
+		duration -= second * time.second
+		let millisecond = Math.floor(duration / time.millisecond)
+		duration -= millisecond * time.millisecond
+		return `${week ? week + "wk " : ""}${day ? day + "d " : ""}${hour ? hour + "h " : ""}${minute ? minute + "min " : ""}${second ? second + "s " : ""}${millisecond ? millisecond + "ms" : ""}`
 	}
 }
