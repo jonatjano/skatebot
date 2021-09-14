@@ -1,24 +1,68 @@
-const Console = require("console");
 time = {second: 1000}
 time.minute = 60 * time.second
 time.hour = 60 * time.minute
 time.day = 24 * time.hour
 time.week = 7 * time.day
 
+/**
+ * @param input {{dayOfWeek: string, hour: string, month: string, day: string, minute: string} | string}
+ * @return {{dayOfWeek: number[], hour: number[], month: number[], day: number[], minute: number[]}}
+ */
 const validateCronInput = input => {
-	const inputToArray = (input, limits, words = [], transform = i => i) => {
-		const rangeReg = `[${limits[0]}-${limits[1]}]`
-		if (! input.match(new RegExp(`^\*|(${rangeReg}(-${rangeReg})?(/\d+)?)$`))) {
-			// TODO regex is not valid, must work on it
+	/**
+	 * @param {string} input
+	 * @param {[number, number]} limits
+	 * @param {string[]} [words]
+	 * @param {Map<String|number, number>} [transform]
+	 * @return {number[]}
+	 */
+	const inputToArray = (input, limits, words = [], transform = new Map()) => {
+		if (words.includes(input)) {
+			input = (words.indexOf(input) + limits[0]).toString()
+		} else if (transform.has(input)) {
+			input = transform.get(input).toString()
+		} else if (transform.has(Number(input))) {
+			input = transform.get(Number(input)).toString()
+		}
+
+		if (! input.includes(",") &&
+			! input.match(/\*(\/\d+)?|(\d+(-\d+)?(\/\d+)?)/)
+		) {
+			throw new TypeError(`Invalid input`)
 		}
 
 		if (input.includes(",")) {
-			return input.split(",").map(part => inputToArray(part, limits, words, transform)).flat(1)
+			return [...new Set(input.split(",").map(part => inputToArray(part, limits, words, transform)).flat(1))]
 		}
-		let step
+		let min, max
+		if (input.includes("-")) {
+			[min, max] = input.split("/")[0].split("-").map(Number)
+			if (min > max) {
+				throw new RangeError("range min is bigger than max")
+			}
+		} else if (input.startsWith("*")) {
+			min = limits[0]
+			max = limits[1]
+		} else {
+			min = Number(input.split("/")[0])
+		}
+		if (min < limits[0] || min > limits[1] || max > limits[1]) {
+			throw new TypeError(`Invalid input`)
+		}
+		const ret = []
 		if (input.includes("/")) {
-			const splitInput = input.split("/")
+			let step = Number(input.split("/")[1])
+			max = max ?? limits[1]
+			for (let i = min; i <= max; i += step) {
+				ret.push(i)
+			}
+		} else {
+			max = max ?? min
+			for (let i = min; i <= max; i ++) {
+				ret.push(i)
+			}
 		}
+		return ret
 	}
 
 /*
@@ -51,15 +95,13 @@ D = number
 	if (input.minute === undefined || input.hour === undefined || input.day === undefined || input.month === undefined || input.dayOfWeek === undefined) {
 		throw new Error("Given input doesn't have the necessary fields")
 	}
-	// input.minute = inputToArray(input.minute, [0,59])
-	// input.hour = inputToArray(input.hour, [0,23])
-	// input.day = inputToArray(input.day, [1,31])
-	// input.month = inputToArray(input.month, [1,12], ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"])
-	// input.dayOfWeek = inputToArray(input.dayOfWeek, [0,6], ["SUN","MON","TUE","WED","THU","FRI","SAT"], i => i === 7 ? 0 : Number.NaN)
-
-	console.log(inputToArray("1,3,7,15,20,18", [0,59]))
-
-	return input
+	return {
+		minute: inputToArray(input.minute, [0, 59]),
+		hour: inputToArray(input.hour, [0, 23]),
+		day: inputToArray(input.day, [1, 31]),
+		month: inputToArray(input.month, [1, 12], ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]),
+		dayOfWeek: inputToArray(input.dayOfWeek, [0, 6], ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], new Map([[7, 0]]))
+	}
 }
 
 module.exports = {
@@ -81,59 +123,17 @@ module.exports = {
 			case "@hourly":   input = "0 * * * *"; break
 		}
 
-		input = validateCronInput(input)
+		const cronInput = validateCronInput(input)
 
 		const date = new Date()
 		date.setUTCMinutes(date.getUTCMinutes() + 1, 0, 0)
-
-		if (input.minute === undefined || input.hour === undefined || input.day === undefined || input.month === undefined || input.dayOfWeek === undefined) {
-			throw new Error("Given input is invalid")
-		}
-
-		const cronInput = {}
-
-		if (input.minute === "*") {
-			cronInput.minute = Array(60).fill().map((_,i) => i)
-		} else {
-			cronInput.minute = input.minute.split(",").map(v => Number(v))
-		}
-		if (input.hour === "*") {
-			cronInput.hour = Array(24).fill().map((_,i) => i)
-		} else {
-			cronInput.hour = input.hour.split(",").map(v => Number(v))
-		}
-		if (input.day === "*") {
-			cronInput.day = Array(31).fill().map((_,i) => i + 1)
-		} else {
-			cronInput.day = input.day.split(",").map(v => Number(v))
-		}
-		if (input.month === "*") {
-			cronInput.month = Array(12).fill().map((_,i) => i + 1)
-		} else {
-			cronInput.month = input.month.split(",").map(v => Number(v))
-		}
-		if (input.dayOfWeek === "*") {
-			cronInput.dayOfWeek = Array(7).fill().map((_,i) => i)
-		} else {
-			cronInput.dayOfWeek = input.dayOfWeek.split(",").map(v => Number(v))
-		}
-
-		if (
-			cronInput.minute.every(Number.isNaN) ||
-			cronInput.hour.every(Number.isNaN) ||
-			cronInput.day.every(Number.isNaN) ||
-			cronInput.month.every(Number.isNaN) ||
-			cronInput.dayOfWeek.every(Number.isNaN)
-		) {
-			throw new Error("Given input is invalid")
-		}
 
 		let dateIsNotValid = true
 		const maxDate = new Date(Date.now())
 		maxDate.setUTCFullYear(maxDate.getUTCFullYear() + 29, 0, 0)
 		while (dateIsNotValid && date.valueOf() < maxDate.valueOf()) {
-
 			dateIsNotValid = false
+
 			while (! cronInput.month.includes(date.getUTCMonth() + 1)) {
 				date.setUTCDate(1)
 				date.setUTCMonth(date.getUTCMonth() + 1)
@@ -151,9 +151,9 @@ module.exports = {
 				dateIsNotValid = true
 			}
 
-			while (! cronInput.hour.includes(date.getUTCHours()) &&
-				cronInput.day.includes(date.getUTCDate()) &&
-				cronInput.dayOfWeek.includes(date.getUTCDay()) &&
+			while (! cronInput.hour.includes(date.getUTCHours()) && (
+				cronInput.day.includes(date.getUTCDate()) ||
+				cronInput.dayOfWeek.includes(date.getUTCDay()) ) &&
 				cronInput.month.includes(date.getUTCMonth() + 1)
 				) {
 				date.setUTCHours(date.getUTCHours() + 1, 0)
@@ -161,12 +161,11 @@ module.exports = {
 			}
 
 			while (! cronInput.minute.includes(date.getUTCMinutes()) &&
-				cronInput.hour.includes(date.getUTCHours()) &&
-				cronInput.day.includes(date.getUTCDate()) &&
-				cronInput.dayOfWeek.includes(date.getUTCDay()) &&
+				cronInput.hour.includes(date.getUTCHours()) && (
+				cronInput.day.includes(date.getUTCDate()) ||
+				cronInput.dayOfWeek.includes(date.getUTCDay()) ) &&
 				cronInput.month.includes(date.getUTCMonth() + 1)
 				) {
-				console.log(date.toUTCString())
 				date.setUTCMinutes(date.getUTCMinutes() + 1)
 				dateIsNotValid = true
 			}
