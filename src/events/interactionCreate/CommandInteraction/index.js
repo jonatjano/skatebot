@@ -86,23 +86,17 @@ module.exports = {
 			}
 
 		}
-		// interaction => interaction.reply({
-		// 	content: watchers
-		// 		.filter(w => w.isForGuild(interaction.guild))
-		// 		.map(w => w.toString()).join("\n"),
-		// 	ephemeral: true
-		// })
 	),
-	"forget-slash-commands": new Command(
-		{
-			name: "forget-slash-commands",
-			description: "Remove all locally registered slash commands",
-			defaultPermission: true
-		},
-		interaction =>
-			interaction.guild.commands.set([])
-				.then(result => interaction.reply({ content: "Forgot slash commands for current guild", ephemeral: true }))
-	),
+	// "forget-slash-commands": new Command(
+	// 	{
+	// 		name: "forget-slash-commands",
+	// 		description: "Remove all locally registered slash commands",
+	// 		defaultPermission: true
+	// 	},
+	// 	interaction =>
+	// 		interaction.guild.commands.set([])
+	// 			.then(result => interaction.reply({ content: "Forgot slash commands for current guild", ephemeral: true }))
+	// ),
 
 	// "next-cron-time": new Command(
 	// 	{
@@ -134,14 +128,14 @@ module.exports = {
 	// 	}
 	// ),
 
-	// ping: new Command(
-	// 	{
-	// 		name: 'ping',
-	// 		description: 'A ping command',
-	// 		defaultPermission: true
-	// 	},
-	// 	inter => {
-	// 		return inter.reply({ content: "Pong !", ephemeral: true })
-	// 	}
-	// ),
+	ping: new Command(
+		{
+			name: 'ping',
+			description: 'A ping command',
+			defaultPermission: true
+		},
+		inter => {
+			return inter.reply({ content: "Pong !", ephemeral: true })
+		}
+	),
 }
