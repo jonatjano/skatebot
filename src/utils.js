@@ -98,9 +98,9 @@ D = number
 	return {
 		minute: inputToArray(input.minute, [0, 59]),
 		hour: inputToArray(input.hour, [0, 23]),
-		day: inputToArray(input.day, [1, 31]),
+		day: input.day !== "*" || input.dayOfWeek === "*" ? inputToArray(input.day, [1, 31]) : [],
 		month: inputToArray(input.month, [1, 12], ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]),
-		dayOfWeek: inputToArray(input.dayOfWeek, [0, 6], ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], new Map([[7, 0]]))
+		dayOfWeek: input.dayOfWeek !== "*" || input.day === "*" ? inputToArray(input.dayOfWeek, [0, 6], ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], new Map([[7, 0]])) : []
 	}
 }
 
