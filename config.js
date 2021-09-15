@@ -16,9 +16,7 @@ module.exports = {
 				users: [
 					"236239413405810688" // sabri
 				],
-				channels: [
-					"884870609434210434"
-				]
+				channels: []
 			}
 		},
 		// tests on my own server, please don't modify

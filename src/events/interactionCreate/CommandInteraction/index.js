@@ -7,15 +7,91 @@ module.exports = {
 	watchers: new Command(
 		{
 			name: "watchers",
-			description: "list message watchers for current server",
+			description: "info about watchers for current server",
+			// type: "CHAT_INPUT",
+			options: [{
+				type: "SUB_COMMAND",
+				name: "list",
+				description: "Show the list of watchers for this server",
+				options: []
+			},{
+				type: "SUB_COMMAND",
+				name: "info",
+				description: "Show detailed info about the watcher",
+				options: [{
+					type: "INTEGER",
+					name: "watcher_id",
+					description: "The id of the watcher you want info of, use /watchers to get list of ids for this server",
+					required: true
+				}]
+			},{
+				type: "SUB_COMMAND",
+				name: "toggle",
+				description: "Toggle on or off the designed watcher",
+				options: [{
+					type: "INTEGER",
+					name: "watcher_id",
+					description: "The id of the watcher, use /watchers to get list of ids for this server",
+					required: true
+				},{
+					type: "BOOLEAN",
+					name: "on_off",
+					description: "True to enable the watcher, false to disable it (default: true)"
+				}]
+			}],
 			defaultPermission: true
 		},
-		interaction => interaction.reply({
-			content: watchers
-				.filter(w => w.isForGuild(interaction.guild))
-				.map(w => w.toString()).join("\n"),
-			ephemeral: true
-		})
+		interaction => {
+			const guildWatcher = watchers.filter(w => w.isForGuild(interaction.guild))
+			let watcherId, state
+			switch (interaction.options.getSubcommand(false)) {
+				case "list":
+					return interaction.reply({
+						content: guildWatcher
+							.map((w,i) => `- ${i} : ${w.toShortString()}`)
+							.join("\n"),
+						ephemeral: true
+					})
+				case "info":
+					watcherId = interaction.options.getInteger("watcher_id", false)
+					if (! guildWatcher[watcherId]) {
+						return interaction.reply({
+							content: `watcher_id (${watcherId}) is out of range, use /${interaction.commandName} list, to get a list of watchers`,
+							ephemeral: true
+						})
+					}
+					return interaction.reply({
+						content: guildWatcher.toString(),
+						ephemeral: true
+					})
+				case "toggle":
+					watcherId = interaction.options.getInteger("watcher_id", false)
+					state = interaction.options.getBoolean("on_off", false) ?? true
+					if (! guildWatcher[watcherId]) {
+						return interaction.reply({
+							content: `watcher_id (${watcherId}) is out of range, use /${interaction.commandName} list, to get a list of watchers`,
+							ephemeral: true
+						})
+					}
+					guildWatcher[watcherId].enabled = state
+					return interaction.reply({
+						content: `Successfully updated state of watcher to ${guildWatcher[watcherId].enabled ? "enabled" : "disabled"}`,
+						ephemeral: true
+					})
+				default:
+					return interaction.reply({
+						content: "You used an invalid sub-command, I don't know how you did, but please, reconsider your life choices",
+						ephemeral: true
+					})
+			}
+
+		}
+		// interaction => interaction.reply({
+		// 	content: watchers
+		// 		.filter(w => w.isForGuild(interaction.guild))
+		// 		.map(w => w.toString()).join("\n"),
+		// 	ephemeral: true
+		// })
 	),
 	"forget-slash-commands": new Command(
 		{

@@ -16,7 +16,7 @@ class MessageWatcherOption {
 		this.crontab = option?.when
 		this.reportUsers = option?.who?.users
 		this.reportChannels = option?.who?.channels
-		this.enabled = this.enabled ?? true
+		this.enabled = option.enabled ?? true
 	}
 
 	validate() {
@@ -37,71 +37,109 @@ module.exports = class MessageWatcher {
 	 */
 	#timeoutId = null
 	/**
+	 * @type {Date}
+	 */
+	#nextDate = new Date(0)
+	/**
+	 * @type {Set<string>}
+	 */
+	#users = new Set()
+	/**
 	 * @param {MessageWatcherOption} messageWatcherOption
 	 */
 	constructor(messageWatcherOption) {
 		this.#options = new MessageWatcherOption(messageWatcherOption)
 		this.#options.validate()
 
-		if (messageWatcherOption.enabled) {
-			this.start()
-		}
+		this.#loop()
 	}
 
-	start() {
-		if (this.#timeoutId === null && this.#options.validate) {
-			this.#loop()
-		}
-	}
+	get enabled() { return this.#options.enabled }
+	set enabled(value) { this.#options.enabled = !!value }
 
-	stop() {
-		clearTimeout(this.#timeoutId)
-		this.#timeoutId = null
+	newMessage(message) {
+		if (message.guild?.id === this.#options.guild &&
+			Date.now() > this.#startDate &&
+			message.content.includes(this.#options.messageContent) &&
+			message.author.id !== client.user.id
+		) {
+			this.#users.add(message.author.id)
+		}
 	}
 
 	#loop() {
 		this.#timeoutId = setTimeout(() => {
-			client.guilds
-				.resolve(this.#options.what.guild)
-				?.channels.fetch(this.#options.who.channels[0])
-					.then(channel => channel.send("watcher report (WIP)"))
+			const messageContent = {content: this.#reportMessage}
 
-			this.#loop()
-		}, Number(utils.nextCronDate(this.#options.when)) - Date.now())
+			if (this.#options.enabled) {
+				for (const reportChannelId of this.#options.reportChannels) {
+					client.guilds
+						.resolve(this.#options.guild)
+						?.channels.fetch(reportChannelId)
+						.then(channel => channel.send(messageContent))
+				}
+
+				for (const reportUserId of this.#options.reportUsers) {
+					client.users
+						.fetch(reportUserId)
+						.then(user => user.createDM())
+						.then(dm => dm.send(messageContent))
+				}
+			}
+
+			this.#users.clear()
+
+			setTimeout(() => this.#loop(), 1000)
+		}, this.#nextCronDate - Date.now())
 	}
 
 	isForGuild(guild) {
 		if (typeof guild === "string") {
-			return this.#options.what.guild === guild
+			return this.#options.guild === guild
 		} else if (guild.id) {
-			return this.#options.what.guild === guild.id
+			return this.#options.guild === guild.id
 		}
 		return false
 	}
 
+	/**
+	 * @return {Date}
+	 */
 	get #nextCronDate() {
-		const crontabInput = this.#options.when.split(" ")
-		return utils.nextCronDate({
-			minute: crontabInput[0],
-			hour: crontabInput[1],
-			day: crontabInput[2],
-			month: crontabInput[3],
-			dayOfWeek: crontabInput[4]
-		})
+		if (this.#nextDate.valueOf() < Date.now()) {
+			this.#nextDate = utils.nextCronDate(this.#options.crontab)
+		}
+		return this.#nextDate
+	}
+
+	/**
+	 * @return {Date}
+	 */
+	get #startDate() {
+		return new Date(this.#nextCronDate.valueOf() - this.#options.readDuration)
+	}
+
+	get #reportMessage() {
+		return `During the observation period I've seen messages from :\n${this.#users.size !== 0 ? [...this.#users.values()].map(u => `- <@${u}>`).join("\n") : "- nobody\n#alone\n#silence\n#suicide"}`
+	}
+
+	toShortString() {
+		return `watches ${this.#options.messageContent.length !== 0 ? `message containing : "\`${this.#options.messageContent}\`"` : "every messages"} and uses crontab configuration : \`${this.#options.crontab}\` ${this.#options.enabled ? "" : "(disabled)"}`
 	}
 
 	toString() {
 		const nextCronDate = this.#nextCronDate
 
-		return `watches ${this.#options.what.messageContent.length !== 0 ? `message containing : "\`${this.#options.what.messageContent}\`"` : "every messages"}
-for ${utils.toTimeString(this.#options.what.readDuration)} before sending a report
-(next report read starts ${utils.dateAsDiscordTag(new Date(+nextCronDate - this.#options.what.readDuration), "R")})
+		return `watches ${this.#options.messageContent.length !== 0 ? `message containing : "\`${this.#options.messageContent}\`"` : "every messages"}
+for ${utils.toTimeString(this.#options.readDuration)} before sending a report
+(next report read starts ${utils.dateAsDiscordTag(new Date(+nextCronDate - this.#options.readDuration), "R")})
 
-report uses the following crontab configuration : \`${this.#options.when}\` (https://crontab.guru/#${this.#options.when.replaceAll(" ", "_")})
+report uses the following crontab configuration : \`${this.#options.crontab}\` (<https://crontab.guru/#${this.#options.crontab.replaceAll(" ", "_")}>)
 (next report will be on ${utils.dateAsDiscordTag(nextCronDate)}, ${utils.dateAsDiscordTag(nextCronDate, "R")})
 
-reports are sent${this.#options.who.users ? ` to ${this.#options.who.users.map(u => `<@${u}>`).join(", ")}
-`: ""}${this.#options.who.channels && this.#options.who.users ? "and" : ""}${this.#options.who.channels ? ` in the channels ${this.#options.who.channels.map(c => `<#${c}>`).join(", ")}` : ""}${! this.#options.who.channels && ! this.#options.who.users ? "nowhere, pls check configuration" : ""}
-`
+reports are sent${this.#options.reportUsers ? ` to ${this.#options.reportUsers.map(u => `<@${u}>`).join(", ")}
+`: ""}${this.#options.reportChannels && this.#options.reportUsers ? "and" : ""}${this.#options.reportChannels ? ` in the channels ${this.#options.reportChannels.map(c => `<#${c}>`).join(", ")}` : ""}
+
+currently ${this.enabled ? "enabled" : "disabled"}`
 	}
 }

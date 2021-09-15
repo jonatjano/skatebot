@@ -14,4 +14,6 @@ module.exports = watchers => message => {
 			.filter(w => w.isForGuild(message.guild))
 			.map(w => w.toString()).join("\n"))
 	}
+
+	watchers.forEach(w => w.newMessage(message))
 }
