@@ -142,8 +142,8 @@ for ${utils.toTimeString(this.#options.readDuration)} before sending a report
 report uses the following crontab configuration : \`${this.#options.crontab}\` (<https://crontab.guru/#${this.#options.crontab.replaceAll(" ", "_")}>)
 (next report will be on ${utils.dateAsDiscordTag(nextCronDate)}, ${utils.dateAsDiscordTag(nextCronDate, "R")})
 
-reports are sent${this.#options.reportUsers ? ` to ${this.#options.reportUsers.map(u => `<@${u}>`).join(", ")}
-`: ""}${this.#options.reportChannels && this.#options.reportUsers ? "and" : ""}${this.#options.reportChannels ? ` in the channels ${this.#options.reportChannels.map(c => `<#${c}>`).join(", ")}` : ""}
+reports are sent${this.#options.reportUsers.length !== 0 ? ` to ${this.#options.reportUsers.map(u => `<@${u}>`).join(", ")}
+`: ""}${this.#options.reportChannels.length !== 0 && this.#options.reportUsers.length !== 0 ? "and" : ""}${this.#options.reportChannels.length !== 0 ? ` in the channels ${this.#options.reportChannels.map(c => `<#${c}>`).join(", ")}` : ""}
 
 currently ${this.enabled ? "enabled" : "disabled"}`
 	}
