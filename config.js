@@ -4,6 +4,7 @@ module.exports = {
 	messageWatchers: [
 		// capsule initiative
 		{
+			react: "✅",
 			what: {
 				guild: "818616962728722452", // capsule initiative
 				messageContent: "cette semaine",

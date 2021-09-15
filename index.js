@@ -39,7 +39,7 @@ client.on("ready", () => {
 	watchers.push(...config.messageWatchers.map(watcherOptions => new MessageWatcher(watcherOptions)))
 });
 
-client.on("messageCreate", messageCreate(watchers));
+client.on("messageCreate", messageCreate);
 
 client.on('interactionCreate', async interaction => {
 	if (interaction.isCommand()) {

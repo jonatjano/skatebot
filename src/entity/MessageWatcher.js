@@ -8,15 +8,17 @@ class MessageWatcherOption {
 	reportUsers
 	reportChannels
 	enabled
+	react
 
 	constructor(option) {
 		this.guild = option?.what?.guild
-		this.messageContent = option?.what?.messageContent
+		this.messageContent = option?.what?.messageContent?.toLowerCase()
 		this.readDuration = option?.what?.readDuration
 		this.crontab = option?.when
 		this.reportUsers = option?.who?.users
 		this.reportChannels = option?.who?.channels
 		this.enabled = option.enabled ?? true
+		this.react = option.react
 	}
 
 	validate() {
@@ -60,10 +62,13 @@ module.exports = class MessageWatcher {
 	newMessage(message) {
 		if (message.guild?.id === this.#options.guild &&
 			Date.now() > this.#startDate &&
-			message.content.includes(this.#options.messageContent) &&
+			message.content.toLowerCase().includes(this.#options.messageContent) &&
 			message.author.id !== client.user.id
 		) {
 			this.#users.add(message.author.id)
+			if (this.#options.react) {
+				message.react(this.#options.react)
+			}
 		}
 	}
 
